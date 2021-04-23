@@ -2,3 +2,4 @@ melitest.json
 data.csv
 /.venv
 /__pycache__
+/.venv
