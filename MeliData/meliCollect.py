@@ -3,6 +3,8 @@ import json
 from datetime import datetime
 import re
 import csv
+import time
+from functools import lru_cache
 
 
 #Attributes to capture from Mercado Libre API
@@ -10,41 +12,37 @@ props= ('id', 'price','sold_quantity','available_quantity','status','time_stamp'
 
 
 
-''' Request items data from Mercado Libre API by item 'id' or 'url' list.
-    'props' is the tuple of attributes that will be filtered'''
+# Request items data from Mercado Libre API by item 'id' or 'url' list.
+# 'props' is the tuple of attributes that will be filtered
 def meliCollect(ids_urls,props):
 
     pubs2save=[]
-    i=0
-    ids_urls_left=len (ids_urls)
-    for id_url in ids_urls:
-        if i<=0:
-            url= 'https://api.mercadolibre.com/items?ids=' #form the url for the request (max 20 ids per request)
-        id=meliURL2ID(id_url)
-        if id:
-            i+=1
-            ids_urls_left-=1
-            url=url+id+',' 
-        if i>=20 or ids_urls_left <= 0:
-            pubs=rq.get(url).json() #get a list of dicts
-            pub2save={}
-            for pub in pubs:
-                for key in props:
-                    pub2save[key]=pub['body'].get(key,'NO_DATA')    #Get the elements by key in props
-                pub2save['time_stamp']=datetime.now().isoformat(timespec='seconds')  #timestamp isn't in the API response so it's added here
-
-                pubs2save.append(dict(pub2save)) #Construct a list with the data collected
-            
-         
-    """
+        
+    ids_urls= [meliURL2ID(id_url) for id_url in ids_urls if meliURL2ID(id_url) ] #Extract the IDs from the URLs valid
+    
     for i in range (0, len (ids_urls), 20 ):
         url= 'https://api.mercadolibre.com/items?ids=' #form the url for the request (max 20 ids per request)
         for id_url in ids_urls [i:i+20]:
-            id=meliURL2ID(id_url)
-            if id:
-                url=url+id+','        
-    
-        pubs=rq.get(url).json() #get a list of dicts
+            url=url+id_url+','   
+                
+        try:
+            pubs=rq.get(url).json() #get a list of dicts from mercadolibre API
+        except rq.exceptions.HTTPError as errh:
+            print ("Http Error:",errh)
+            return None
+        except rq.exceptions.ConnectionError as errc:
+            print ("Error Connecting:",errc)
+            return None
+        except rq.exceptions.Timeout as errt:
+            print ("Timeout Error:",errt)
+            return None
+        except rq.exceptions.RequestException as err:
+            print ("OOps: Something Else",err)
+            return None
+
+        if(type(pubs) != type(list())): #if the answer isn't a list of dicts means that there is an error
+            continue
+
         pub2save={}
         for pub in pubs:
             for k in props:
@@ -53,11 +51,11 @@ def meliCollect(ids_urls,props):
 
             pubs2save.append(dict(pub2save)) #Construct a list with the data collected
 
-    """
     return pubs2save
 
 #Transform an URL to an ID, if an ID is used as argument it returns the ID whithout the "-" or 
 # "none" if the URL has no ID
+@lru_cache(maxsize=1) #Catchin the last result speedup the use in comprehesion list double use.
 def meliURL2ID(url):
     id=re.search(r'MLA[-]?[1234567890]+', url)
     if id:
@@ -81,6 +79,8 @@ def meli_csv_header (file, fieldnames):
         writer.writeheader()
 
 
+
+#Here start the module test.
 
 csvPath = 'data.csv'
 
@@ -106,6 +106,7 @@ urls=[
 'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
 'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
 'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+'https://articulo.mercadolibre.com.ar/MLA-006539602-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
 'https://articulo.mercadolibre.com.ar/MLA-836539602-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
 'https://articulo.mercadolibre.com.ar/MLA-868633841-sensor-de-movimiento-de-pared-apto-led-exterior-oferta-_JM#position=2&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
 'https://articulo.mercadolibre.com.ar/MLA-870908057-sensor-de-movimiento-360-infrarrojo-presencia-_JM#position=3&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
@@ -135,10 +136,11 @@ if __name__ == "__main__":
 
     #Get the data    
     dataCollected= meliCollect(urls,props)
-    for data in dataCollected:
-        print (data)
+    if dataCollected:
+        for data in dataCollected:
+            print (data)
 
-    #Save de data in the CSV file
-    melisave2csv (csvPath,dataCollected, props)
+        #Save de data in the CSV file
+        melisave2csv (csvPath,dataCollected, props)
 
 
