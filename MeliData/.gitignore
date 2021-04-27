@@ -1,5 +1,6 @@
 melitest.json
 data.csv
+Data*.csv
 /.venv
 /__pycache__
 /.venv

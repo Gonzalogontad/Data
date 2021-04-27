@@ -21,6 +21,19 @@ def get_links_gsheet (json_file, gsheet_file, worksheet):
     return [link['Link'] for link in links]
 
 
+def saveDicts2gsheet (list_of_rows, fieldnames, json_file, gsheet_file, worksheet):
+    ws = open_sheet (gsheet_file,worksheet,json_file)
+    rows=[]
+    for list_row in list_of_rows:
+        row=[]
+        for key in fieldnames:
+            row.append(list_row[key])
+        rows.append (row)
+
+    ws.append_rows(rows)
+
+
+
 def saveCSV2gsheet (csv_file, fieldnames, json_file, gsheet_file, worksheet):
     with open(csv_file, newline='') as csvfile:
         csvdata = csv.DictReader(csvfile)
