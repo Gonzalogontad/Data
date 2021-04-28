@@ -5,11 +5,8 @@ echo.
 
 
 python -m venv .venv
-START /B %~dp0/.venv/Scripts/activate.bat
 
-echo Instalacion de componentes
-
-pip install -r %~dp0/requirements.txt
+%~dp0.venv\Scripts\activate.bat && echo Instalacion de componentes && pip install -r %~dp0requirements.txt && echo Instalacion finalizada && deactivate
 
 
-START /B %~dp0/.venv/Scripts/deactivate.bat
+
