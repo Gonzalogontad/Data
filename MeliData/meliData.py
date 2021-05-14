@@ -10,12 +10,13 @@ json_file= os.path.dirname(os.path.abspath(__file__))+"/melitest.json"
 csvPath =os.path.dirname(os.path.abspath(__file__))+'/DataBackup/'
 
 #Tuple of attributes to get from each advertise
-props= ('id', 'price','sold_quantity','available_quantity','status','time_stamp')
+props= ('id', 'price','sold_quantity','available_quantity','status','time_stamp','Name')
 
 def main ():
     #Get the links and collect the data from Mercado libre
     links= get_links_gsheet(json_file,"Links",0)
-    pubs2save = meliCollect(links, props)
+    urls = [link[0] for link in links]
+    pubs2save = meliCollect(urls, props)
 
     #Create one data backup file per month
     date=datetime.datetime.now()

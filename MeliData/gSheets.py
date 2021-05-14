@@ -18,7 +18,7 @@ def open_sheet(file, worksheet, json_file):
 def get_links_gsheet (json_file, gsheet_file, worksheet):
     ws = open_sheet (gsheet_file,worksheet,json_file)
     links=ws.get_all_records()
-    return [link['Link'] for link in links]
+    return [(link['Link'],link['Name']) for link in links]
 
 
 def saveDicts2gsheet (list_of_rows, fieldnames, json_file, gsheet_file, worksheet):
@@ -45,7 +45,7 @@ def saveCSV2gsheet (csv_file, fieldnames, json_file, gsheet_file, worksheet):
                 row.append(csv_row[key])
             rows.append (row)
 
-        ws.append_rows(rows)
+        ws.append_rows(rows, value_input_option='USER_ENTERED')
 
 
 

@@ -8,7 +8,7 @@ from functools import lru_cache
 
 
 #Attributes to capture from Mercado Libre API
-props= ('id', 'price','sold_quantity','available_quantity','status','time_stamp')
+props= ('id', 'price','sold_quantity','available_quantity','status','time_stamp','Name')
 
 
 
@@ -48,8 +48,9 @@ def meliCollect(ids_urls,props):
             for k in props:
                 pub2save[k]=pub['body'].get(k,'NO_DATA')    #Get the elements by key in props
             pub2save['time_stamp']=datetime.now().isoformat(timespec='seconds')  #timestamp isn't in the API response so it's added here
-
+            pub2save['Name']=r'=BUSCARV(A2;NombreyID;2;FALSO)'
             pubs2save.append(dict(pub2save)) #Construct a list with the data collected
+            
 
     return pubs2save
 
