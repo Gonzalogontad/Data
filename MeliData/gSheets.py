@@ -18,7 +18,8 @@ def open_sheet(file, worksheet, json_file):
 def get_links_gsheet (json_file, gsheet_file, worksheet):
     ws = open_sheet (gsheet_file,worksheet,json_file)
     links=ws.get_all_records()
-    return [(link['Link'],link['Name']) for link in links]
+    #return [(link['Link'],link['Name']) for link in links]
+    return links
 
 
 def saveDicts2gsheet (list_of_rows, fieldnames, json_file, gsheet_file, worksheet):
@@ -30,8 +31,42 @@ def saveDicts2gsheet (list_of_rows, fieldnames, json_file, gsheet_file, workshee
             row.append(list_row[key])
         rows.append (row)
 
-    ws.append_rows(rows)
+    ws.append_rows(rows, value_input_option='USER_ENTERED')
 
+def update_table_gsheet (new_names, props,json_file, gsheet_file, worksheet):
+    ws = open_sheet (gsheet_file,worksheet,json_file)
+    old_names=ws.get_all_records()
+    for new_name in new_names:
+        found= False
+        for index in range(len(old_names)):
+            if (old_names[index][props[0]]==new_name[props[0]]):
+                if (old_names[index][props[1]]!=new_name[props[1]]):
+                    ws.delete_row(index+2)
+                    row = [new_name[key] for key in props]
+                    ws.append_row (row)
+                #old_names[index]=new_name
+                found=True
+                break
+            else:
+                found=False
+        if not found:
+            row = [new_name[key] for key in props]
+            ws.append_row (row)
+            #old_names.append(new_name, value_input_option='USER_ENTERED')
+
+    '''ws.batch_update([{
+    'range': 'A1:B1',
+    'values': [['42', '43']],
+}, {
+    'range': 'my_range',
+    'values': [['44', '45']],
+}])
+
+# Note: named ranges are defined in the scope of
+# a spreadsheet, so even if `my_range` does not belong to
+# this sheet it is still updated
+    saveDicts2gsheet(old_names,props,json_file,gsheet_file,worksheet)'''
+        
 
 
 def saveCSV2gsheet (csv_file, fieldnames, json_file, gsheet_file, worksheet):

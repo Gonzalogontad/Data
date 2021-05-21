@@ -12,6 +12,7 @@ props= ('id', 'price','sold_quantity','available_quantity','status','time_stamp'
 
 
 
+
 # Request items data from Mercado Libre API by item 'id' or 'url' list.
 # 'props' is the tuple of attributes that will be filtered
 def meliCollect(ids_urls,props):
@@ -48,7 +49,8 @@ def meliCollect(ids_urls,props):
             for k in props:
                 pub2save[k]=pub['body'].get(k,'NO_DATA')    #Get the elements by key in props
             pub2save['time_stamp']=datetime.now().isoformat(timespec='seconds')  #timestamp isn't in the API response so it's added here
-            pub2save['Name']=r'=BUSCARV(A2;NombreyID;2;FALSO)'
+            id= pub2save['id']
+            pub2save['Name']=f'=BUSCARV("{id}";NombreyID;2;FALSO)'
             pubs2save.append(dict(pub2save)) #Construct a list with the data collected
             
 

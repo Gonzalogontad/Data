@@ -1,4 +1,5 @@
-from gSheets import get_links_gsheet,saveCSV2gsheet, saveDicts2gsheet
+from meliCollect import meliURL2ID
+from gSheets import get_links_gsheet,saveCSV2gsheet, saveDicts2gsheet,update_table_gsheet
 from meliCollect import meliCollect, melisave2csv,meli_csv_header
 import os
 import datetime
@@ -11,11 +12,12 @@ csvPath =os.path.dirname(os.path.abspath(__file__))+'/DataBackup/'
 
 #Tuple of attributes to get from each advertise
 props= ('id', 'price','sold_quantity','available_quantity','status','time_stamp','Name')
+props_id_name= ('id', 'Name')
 
 def main ():
     #Get the links and collect the data from Mercado libre
     links= get_links_gsheet(json_file,"Links",0)
-    urls = [link[0] for link in links]
+    urls = [link['Link'] for link in links]
     pubs2save = meliCollect(urls, props)
 
     #Create one data backup file per month
@@ -28,5 +30,9 @@ def main ():
     #Upload the data to Google sheets
     saveDicts2gsheet(pubs2save,props,json_file,'Datos',0)
 
+    for link in links:
+        link['id']=meliURL2ID(link['Link'])
+    #saveDicts2gsheet(links,props_id_name,json_file,'Datos',1)
+    update_table_gsheet (links, props_id_name,json_file, 'Datos', 1)
 if __name__ == "__main__":
     main()
