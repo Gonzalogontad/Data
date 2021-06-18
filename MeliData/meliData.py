@@ -1,6 +1,7 @@
+#from Data.MeliData.meliCollect import meli_scrap
 from meliCollect import meliURL2ID
 from gSheets import get_links_gsheet,saveCSV2gsheet, saveDicts2gsheet,update_table_gsheet
-from meliCollect import meliCollect, melisave2csv,meli_csv_header
+from meliCollect import meliCollect, melisave2csv,meli_csv_header, meli_scrap
 import os
 import datetime
 
@@ -18,7 +19,8 @@ def main ():
     #Get the links and collect the data from Mercado libre
     links= get_links_gsheet(json_file,"Links",0)
     urls = [link['Link'] for link in links]
-    pubs2save = meliCollect(urls, props)
+    #pubs2save = meliCollect(urls, props) #The use of Melis API was replaced for the scrapig option below
+    pubs2save = meli_scrap(urls, props)
 
     #Create one data backup file per month
     date=datetime.datetime.now()
@@ -30,9 +32,11 @@ def main ():
     #Upload the data to Google sheets
     saveDicts2gsheet(pubs2save,props,json_file,'Datos',0)
 
+    #Updating the name and ID table
     for link in links:
         link['id']=meliURL2ID(link['Link'])
-    #saveDicts2gsheet(links,props_id_name,json_file,'Datos',1)
+    
     update_table_gsheet (links, props_id_name,json_file, 'Datos', 1)
+    
 if __name__ == "__main__":
     main()

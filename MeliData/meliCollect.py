@@ -5,11 +5,8 @@ import re
 import csv
 import time
 from functools import lru_cache
-
-
-#Attributes to capture from Mercado Libre API
-props= ('id', 'price','sold_quantity','available_quantity','status','time_stamp','Name')
-
+from bs4 import BeautifulSoup
+import requests
 
 
 
@@ -56,6 +53,52 @@ def meliCollect(ids_urls,props):
 
     return pubs2save
 
+#Get data from Mercadolibre by scraping.
+#Scraping methode achives better results than the API way 
+#because the API rounds some of the values.
+
+#Melicrap receive the a list of URLs to scrap and a list of atributes (props) to find.
+#Valid atributes are 'id', 'price','sold_quantity','available_quantity','status','time_stamp' and 'Name'
+#Returns a list of dicts with all the atributes
+def meli_scrap(urls, props):
+    props_translate={   'id':'itemId', 
+                        'price':'localItemPrice',
+                        'sold_quantity':'soldStock',
+                        'available_quantity':'availableStock',
+                        'status':'status',
+                        'time_stamp':'time_stamp',
+                        'Name':'Name'}
+    pubs =[]
+    pubs2save=[]
+    for url in urls:
+        try:
+            response=requests.get(url).text
+        except rq.exceptions.HTTPError as errh:
+            print ("Http Error:",errh)
+            return None
+        except rq.exceptions.ConnectionError as errc:
+            print ("Error Connecting:",errc)
+            return None
+        except rq.exceptions.Timeout as errt:
+            print ("Timeout Error:",errt)
+            return None
+        except rq.exceptions.RequestException as err:
+            print ("OOps: Something Else",err)
+            return None
+        my_pattern = r'dataLayer = \[(\{.*\})\]'
+        mydivs = re.search(my_pattern, response)
+        if mydivs:
+            data = json.loads(mydivs[1])
+            pub2save={}
+            for k in props:
+                pub2save[k]=data.get(props_translate[k],'NO_DATA')    #Get the elements by key in props
+            pub2save['time_stamp']=datetime.now().isoformat(timespec='seconds')  #timestamp isn't in the API response so it's added here
+            id=pub2save['id']
+            pub2save['Name']=f'=BUSCARV("{id}";NombreyID;2;FALSO)'
+            pubs2save.append(pub2save) #Construct a list with the data collected
+    return pubs2save
+
+
 #Transform an URL to an ID, if an ID is used as argument it returns the ID whithout the "-" or 
 # "none" if the URL has no ID
 @lru_cache(maxsize=1) #Catchin the last result speedup the use in comprehesion list double use.
@@ -84,66 +127,71 @@ def meli_csv_header (file, fieldnames):
 
 
 #Here start the module test.
-
-csvPath = 'data.csv'
-
-urls=[
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-006539602-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-836539602-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-868633841-sensor-de-movimiento-de-pared-apto-led-exterior-oferta-_JM#position=2&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-870908057-sensor-de-movimiento-360-infrarrojo-presencia-_JM#position=3&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-836559198-sensor-movimiento-huayra-infrarrojo-interior-360-apto-led-_JM#position=4&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-836497568-sensor-de-movimiento-pared-infrarrojo-ip65-180-cuotas-_JM#position=5&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-870941055-control-remoto-para-sensor-de-movimiento-presencia-_JM#position=6&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-870910961-sensor-de-movimiento-360-presencia-infrarrojo-_JM#position=7&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-836554574-sensor-de-movimiento-aplicar-infrarrojo-360-ip65-pack-x3-_JM#position=8&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-750859545-sensor-de-movimiento-huayra-shf-002-360-para-techo-apto-led-_JM#position=9&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-851836402-plafon-led-16w-aplicar-techo-redondo-con-sensor-mov-_JM?searchVariation=54723832241#searchVariation=54723832241&position=10&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-874223136-sensor-movimiento-360-infrarrojo-presencia-control-cuotas-_JM#position=11&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-884160516-sensor-de-movimiento-360-presencia-aplicar-control-cuotas-_JM#position=12&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-875914305-sensor-de-movimiento-360-infrarrojo-presencia-_JM#position=13&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-836554577-sensor-movimiento-aplicar-infrarrojo-360-ip65-pack-x3-cuotas-_JM#position=14&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-874222759-sensor-movimiento-360-infrarrojo-presencia-control-cuotas-_JM#position=15&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-835896204-sensor-de-movimiento-embutir-alta-frecuencia-apto-led-_JM#position=16&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-874222725-sensor-de-movimiento-360-infrarrojo-presencia-control-_JM#position=17&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-870939488-control-remoto-para-sensor-de-movimiento-presencia-cuotas-_JM#position=18&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-855442597-sensor-de-movimiento-embutir-huayra-apto-led-_JM#position=19&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-879925072-sensor-de-movimiento-de-alta-frecuencia-huayra-rh-l01-_JM#position=20&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-879921274-sensor-de-movimiento-de-alta-frecuencia-huayra-rh-l02-_JM#position=21&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-'https://articulo.mercadolibre.com.ar/MLA-874223602-sensor-movimiento-360-presencia-aplicar-control-pack-x10-_JM#position=22&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
-]
-
-
 if __name__ == "__main__":
+    csvPath = 'data.csv'
+
+    '''urls=[
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-006539602-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-836539602-sensor-movimiento-huayra-pared-infrarrojo-ip65-180-led-_JM#position=1&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-868633841-sensor-de-movimiento-de-pared-apto-led-exterior-oferta-_JM#position=2&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-870908057-sensor-de-movimiento-360-infrarrojo-presencia-_JM#position=3&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-836559198-sensor-movimiento-huayra-infrarrojo-interior-360-apto-led-_JM#position=4&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-836497568-sensor-de-movimiento-pared-infrarrojo-ip65-180-cuotas-_JM#position=5&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-870941055-control-remoto-para-sensor-de-movimiento-presencia-_JM#position=6&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-870910961-sensor-de-movimiento-360-presencia-infrarrojo-_JM#position=7&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-836554574-sensor-de-movimiento-aplicar-infrarrojo-360-ip65-pack-x3-_JM#position=8&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-750859545-sensor-de-movimiento-huayra-shf-002-360-para-techo-apto-led-_JM#position=9&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-851836402-plafon-led-16w-aplicar-techo-redondo-con-sensor-mov-_JM?searchVariation=54723832241#searchVariation=54723832241&position=10&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-874223136-sensor-movimiento-360-infrarrojo-presencia-control-cuotas-_JM#position=11&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-884160516-sensor-de-movimiento-360-presencia-aplicar-control-cuotas-_JM#position=12&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-875914305-sensor-de-movimiento-360-infrarrojo-presencia-_JM#position=13&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-836554577-sensor-movimiento-aplicar-infrarrojo-360-ip65-pack-x3-cuotas-_JM#position=14&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-874222759-sensor-movimiento-360-infrarrojo-presencia-control-cuotas-_JM#position=15&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-835896204-sensor-de-movimiento-embutir-alta-frecuencia-apto-led-_JM#position=16&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-874222725-sensor-de-movimiento-360-infrarrojo-presencia-control-_JM#position=17&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-870939488-control-remoto-para-sensor-de-movimiento-presencia-cuotas-_JM#position=18&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-855442597-sensor-de-movimiento-embutir-huayra-apto-led-_JM#position=19&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-879925072-sensor-de-movimiento-de-alta-frecuencia-huayra-rh-l01-_JM#position=20&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-879921274-sensor-de-movimiento-de-alta-frecuencia-huayra-rh-l02-_JM#position=21&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    'https://articulo.mercadolibre.com.ar/MLA-874223602-sensor-movimiento-360-presencia-aplicar-control-pack-x10-_JM#position=22&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb',
+    ]'''
+
+    urls=['https://articulo.mercadolibre.com.ar/MLA-874222725-sensor-de-movimiento-360-infrarrojo-presencia-control-_JM#position=17&type=item&tracking_id=06fab054-5c21-46d9-bf29-1495b15ff8bb']
+
+    #Attributes to capture from Mercado Libre API
+    props= ('id', 'price','sold_quantity','available_quantity','status','time_stamp','Name')
 
     #Get the data    
-    dataCollected= meliCollect(urls,props)
-    if dataCollected:
-        for data in dataCollected:
+    dataCollected_A= meliCollect(urls,props)
+    dataCollected_B= meli_scrap(urls,props)
+    if dataCollected_A and dataCollected_B:
+        for data in dataCollected_A:
+            print (data)
+        for data in dataCollected_B:
             print (data)
 
         #Save de data in the CSV file
-        melisave2csv (csvPath,dataCollected, props)
+        #melisave2csv (csvPath,dataCollected, props)
 
 

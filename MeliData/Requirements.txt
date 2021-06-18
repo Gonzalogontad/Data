@@ -1,3 +1,4 @@
 requests
 parse
 gspread
+bs4

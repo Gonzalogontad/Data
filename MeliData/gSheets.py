@@ -5,10 +5,6 @@ import os
 
 
 
-json_file= os.path.dirname(os.path.abspath(__file__))+"/melitest.json"
-csvPath =os.path.dirname(os.path.abspath(__file__))+'/data.csv'
-props= ('id', 'price','sold_quantity','available_quantity','status','time_stamp')
-
 def open_sheet(file, worksheet, json_file):
     gc = gspread.service_account(filename=json_file)
     sheet=gc.open(file)
@@ -18,7 +14,6 @@ def open_sheet(file, worksheet, json_file):
 def get_links_gsheet (json_file, gsheet_file, worksheet):
     ws = open_sheet (gsheet_file,worksheet,json_file)
     links=ws.get_all_records()
-    #return [(link['Link'],link['Name']) for link in links]
     return links
 
 
@@ -44,7 +39,6 @@ def update_table_gsheet (new_names, props,json_file, gsheet_file, worksheet):
                     ws.delete_row(index+2)
                     row = [new_name[key] for key in props]
                     ws.append_row (row)
-                #old_names[index]=new_name
                 found=True
                 break
             else:
@@ -52,21 +46,7 @@ def update_table_gsheet (new_names, props,json_file, gsheet_file, worksheet):
         if not found:
             row = [new_name[key] for key in props]
             ws.append_row (row)
-            #old_names.append(new_name, value_input_option='USER_ENTERED')
-
-    '''ws.batch_update([{
-    'range': 'A1:B1',
-    'values': [['42', '43']],
-}, {
-    'range': 'my_range',
-    'values': [['44', '45']],
-}])
-
-# Note: named ranges are defined in the scope of
-# a spreadsheet, so even if `my_range` does not belong to
-# this sheet it is still updated
-    saveDicts2gsheet(old_names,props,json_file,gsheet_file,worksheet)'''
-        
+       
 
 
 def saveCSV2gsheet (csv_file, fieldnames, json_file, gsheet_file, worksheet):
@@ -86,6 +66,10 @@ def saveCSV2gsheet (csv_file, fieldnames, json_file, gsheet_file, worksheet):
 
 
 def main():
+    json_file= os.path.dirname(os.path.abspath(__file__))+"/melitest.json"
+    csvPath =os.path.dirname(os.path.abspath(__file__))+'/data.csv'
+    props= ('id', 'price','sold_quantity','available_quantity','status','time_stamp','Name')
+
     urls= get_links_gsheet(json_file,"Links",0)
     print (urls)
     saveCSV2gsheet (csvPath,props,json_file,"Datos",0)
@@ -99,9 +83,9 @@ def main():
     """
     #list_of_dicts = w.get_all_records()
     #print (list_of_dicts)
-#    w.update_cell(1, 2, 'Bingo!')
- #   list_of_dicts = w.get_all_records()
-  #  print (list_of_dicts)
+    #w.update_cell(1, 2, 'Bingo!')
+    #list_of_dicts = w.get_all_records()
+    #print (list_of_dicts)
 
 if __name__ == "__main__":
     main()
