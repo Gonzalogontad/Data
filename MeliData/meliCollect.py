@@ -191,7 +191,7 @@ if __name__ == "__main__":
         for data in dataCollected_B:
             print (data)
 
-        #Save de data in the CSV file
+        #Save the data in the CSV file
         #melisave2csv (csvPath,dataCollected, props)
 
 
